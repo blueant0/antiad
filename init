@@ -2,6 +2,7 @@
 
 curdir=`cd $(dirname $0) && pwd`;
 lndir="/data/apps/antiad";
+nginxhtmldir="/data/nginx/html";
 flashdir="/data/nginx/html/antiad";
 nginxconf="/data/nginx/conf/servers/antiad.conf";
 dnssrcdir="/data/conf/antiad";
@@ -37,6 +38,7 @@ genlauncher()
 
 install()
 {
+    [ ! -d $nginxhtmldir ] && mkdir $nginxhtmldir;
     id=`basename $curdir`;
     rm -rf $flashdir;
     cd $curdir;
