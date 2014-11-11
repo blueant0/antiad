@@ -1,0 +1,192 @@
+#!/bin/sh
+
+curdir=`cd $(dirname $0) && pwd`;
+lndir="/data/apps/antiad";
+flashdir="/data/nginx/html/antiad";
+nginxconf="/data/nginx/conf/servers/antiad.conf";
+dnssrcdir="/data/conf/antiad";
+dnstagdir="/data/conf/dns/antiad";
+
+dnssrcconf="antiad_dns.conf";
+
+dnsconf="/data/conf/dns/antiad.conf";
+
+dnstagrevdir="\/data\/conf\/dns\/antiad";
+dnsmasqconf="/system/conf/dnsmasq.conf";
+launcherconf="/data/conf/launcher/conf.d/antiad.conf";
+launcherlocal="$curdir/antiad.conf";
+
+usage() {
+    echo "ERROR: action missing"
+    echo "syntax: $0 <start|stop|restart|status|config|install|uninstall>"
+    echo "example: $0 start"
+}
+
+genlauncher()
+{
+    echo "{" > $launcherlocal;
+    echo "    \"name\" : \"视频广告终结者\"," >> $launcherlocal;
+    echo "    \"icon\" : \"$curdir/appicon_antiad_normal.png\"," >> $launcherlocal;
+    echo "    \"iconPressed\" : \"$curdir/appicon_antiad_active.png\"," >> $launcherlocal;
+    echo "    \"exec\" : \"/system/apps/tp/bin/custom $curdir/tp.conf\"," >> $launcherlocal;
+    echo "    \"msgNum\" : 4" >> $launcherlocal;
+    echo "}" >> $launcherlocal;
+    [ -f $launcherconf ] && rm -f $launcherconf;
+    /bin/cp $launcherlocal $launcherconf;
+}
+
+install()
+{
+    id=`basename $curdir`;
+    rm -rf $flashdir;
+    cd $curdir;
+    /bin/ln -s $curdir/flash $flashdir;
+    res=$?;
+    if [ $res -eq 0 ]; then
+        [ -f $nginxconf ] && rm -f $nginxconf;
+        /bin/ln -s $curdir/nginx/antiad.conf $nginxconf;    
+        ngxcpres=$?;
+        [ $ngxcpres -eq 0 ] && /system/sbin/nginx.sh reload;
+    else
+        return 1;
+    fi
+    if [ $res -eq 0 ] && [ $ngxcpres -eq 0 ]; then
+        #[ ! -d $dnstagdir ] && mkdir -p $dnstagdir;
+        #/bin/ln -s $curdir/dns/*.conf $dnstagdir;
+        /bin/sed -ie "s/\/antiad\//\/$id\//g" $curdir/$dnssrcconf && cp $curdir/$dnssrcconf $dnsconf;
+        dnsres2=$?;
+        echo "dnsres2=$dnsres2" >> /data/log/debug.log;
+        if [ $dnsres2 -eq 0 ]; then
+            #line=`cat /system/conf/dnsmasq.conf | grep -e "^conf-dir=$dnstagdir" | wc -l`;
+            #echo $line >> /data/log/debug.log;
+            #/system/sbin/writesys.sh
+            #if [ $line -ne 0 ]; then
+            #    /bin/sed -ie "/#conf-dir=$dnstagrevdir/d" $dnsmasqconf;
+            #    /bin/sed -ie "/conf-dir=$dnstagrevdir/d" $dnsmasqconf;
+            #fi
+            #echo "conf-dir=$dnstagdir" >> /system/conf/dnsmasq.conf;
+            /system/sbin/dns.sh restart
+            
+            genlauncher;
+
+            /bin/sed -ie "s/data\/apps\/antiad/data\/apps\/$id/g" $curdir/tp.conf;
+        else
+            return 1;
+        fi
+    else
+        return 1;
+    fi
+
+    return 0;
+}
+
+uninstall()
+{
+    cd $curdir;
+    # dnsmasq
+    rm -f $dnsconf;
+    /system/sbin/dns.sh restart
+
+    # nginx
+    rm -rf $nginxconf;
+    rm -rf $flashdir;
+    # tp launcher
+    rm -f $launcherlocal;
+    rm -f $launcherconf;
+
+    # clean for old version 
+    [ -L $lndir ] && rm $lndir;
+    [ -d $dnssrcdir ] && rm -rf $dnssrcdir;
+    [ -d $dnstagdir ] && rm -rf $dnstagdir; 
+}
+
+start()
+{
+    if [ ! -f $dnsconf ]; then
+        cp $curdir/$dnssrcconf $dnsconf;
+    fi
+    /system/sbin/dns.sh restart;
+    [ -f $curdir/tp.conf ] && /bin/sed -ie "s/\"content\": \"关闭\"\,/\"content\": \"启动\"\,/g" $curdir/tp.conf;
+    pid=`ps |grep custom|grep -v grep|awk '{print $1}'`;
+    kill -SIGUSR1 $pid;
+    return 0;
+}
+
+stop()
+{
+    if [ -f $dnsconf ]; then
+        rm -f $dnsconf;
+    fi
+    /system/sbin/dns.sh restart;
+    [ -f $curdir/tp.conf ] && /bin/sed -ie "s/\"content\": \"启动\"\,/\"content\": \"关闭\"\,/g" $curdir/tp.conf;
+    pid=`ps |grep custom|grep -v grep|awk '{print $1}'`;
+    kill -SIGUSR1 $pid;
+    return 0;
+}
+
+status()
+{
+    echo "Hello, modou";
+    return 0;
+}
+
+config()
+{
+    echo "Hello, modouweather"
+    return 0;
+}
+
+# main
+if [ $# -lt 1 ]; then
+    usage
+    exit 1
+fi
+
+case "$1" in 
+    "stop")
+        stop;
+        if [ "0" != "$?" ]; then
+            exit 1;
+        fi 
+        exit 0;
+        ;;
+    "start")
+        start;
+        if [ "0" != "$?" ]; then
+            exit 1;
+        fi 
+        exit 0;
+        ;;
+    "status")
+        status;
+        if [ "0" != "$?" ]; then
+            exit 1;
+        fi 
+        exit 0;
+        ;;
+    "config")
+        config;
+        if [ "0" != "$?" ]; then
+            exit 1;
+        fi 
+        exit 0;
+        ;;
+    "install")
+        install;
+        if [ "0" != "$?" ]; then
+            exit 1;
+        fi 
+        exit 0;
+        ;;
+    "uninstall")
+        uninstall;
+        if [ "0" != "$?" ]; then
+            exit 1;
+        fi 
+        exit 0;
+        ;;
+    *)
+        usage init;
+        exit 1;
+        ;;
+esac

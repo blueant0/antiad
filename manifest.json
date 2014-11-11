@@ -1,0 +1,14 @@
+{
+    "package_id"      : "com.modou.antiad",
+    "name"            : "视频广告终结者",
+    "author"          : "广告终结者开发团队、黑牙",
+    "author_mail"     : "",
+    "homepage"        : "",
+    "version"         : "0.1.4",
+    "os_version"      : "0.6.37_beta1",
+    "release_date"    : "2014.10.13",
+    "icon"            : "./appicon_antiad_normal.png",
+    "location"        : "internal",
+    "description"     : "去除视频广告应用，开启后首次使用注意清除浏览器缓存！<br>支持优酷，土豆，搜狐，奇艺，酷6",
+    "instruction"     : "1.一键安装; 2.触屏开关"
+}
