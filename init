@@ -102,11 +102,27 @@ uninstall()
     [ -d $dnstagdir ] && rm -rf $dnstagdir; 
 }
 
+checkgate()
+{
+    cd $curdir;
+    nowgwip=`ifconfig br0|grep "inet addr:"|awk '{print $2}'|cut -d':' -f2|cut -d' ' -f1`;
+    for i in `ls dns/*.conf`
+    do
+        tag=`cat $i|grep "address="|head -1|cut -d'/' -f3`;
+        #echo "tag=$tag";
+        if [ "$tag" != "$nowgwip" ]; then
+            echo "not same";
+            sed -ie "s/$tag/$nowgwip/g" $i;
+        fi
+    done
+}
+
 start()
 {
     if [ ! -f $dnsconf ]; then
         cp $curdir/$dnssrcconf $dnsconf;
     fi
+    checkgate;
     /system/sbin/dns.sh restart;
     [ -f $curdir/tp.conf ] && /bin/sed -ie "s/\"content\": \"关闭\"\,/\"content\": \"启动\"\,/g" $curdir/tp.conf;
     pid=`ps |grep custom|grep -v grep|awk '{print $1}'`;
