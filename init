@@ -109,7 +109,6 @@ checkgate()
     for i in `ls dns/*.conf`
     do
         tag=`cat $i|grep "address="|head -1|cut -d'/' -f3`;
-        #echo "tag=$tag";
         if [ "$tag" != "$nowgwip" ]; then
             echo "not same";
             sed -ie "s/$tag/$nowgwip/g" $i;
